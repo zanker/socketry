@@ -25,7 +25,7 @@ module Socketry
       end
 
       def timeout_seconds(mode)
-        timeouts[mode]
+        @time_left
       end
     end
   end

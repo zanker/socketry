@@ -6,7 +6,7 @@ module Socketry
     def_delegators :@socket, :close, :close_read, :close_write, :closed?
     def_delegators :@socket, :addr, :peeraddr, :setsockopt, :getsockname
 
-    def initialize
+    def initialize(options = {})
     end
   end
 end
