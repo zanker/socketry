@@ -1,0 +1,2 @@
+require "socketry/version"
+

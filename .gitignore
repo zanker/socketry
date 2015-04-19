@@ -1,0 +1,13 @@
+*.gem
+.bundle
+.config
+.rvmrc
+.yardoc
+Gemfile.lock
+coverage
+doc
+measurement
+pkg
+rdoc
+spec/reports
+tmp

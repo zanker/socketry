@@ -1,0 +1,54 @@
+Metrics/BlockNesting:
+  Max: 2
+
+Metrics/ClassLength:
+  CountComments: false
+  Max: 120
+
+Metrics/PerceivedComplexity:
+  Max: 8
+
+Metrics/CyclomaticComplexity:
+  Max: 8
+
+Metrics/LineLength:
+  AllowURI: true
+  Max: 143
+
+Metrics/MethodLength:
+  CountComments: false
+  Max: 22
+
+Metrics/ParameterLists:
+  Max: 3
+  CountKeywordArgs: true
+
+Metrics/AbcSize:
+  Enabled: false
+
+Style/Documentation:
+  Enabled: false
+
+Style/DotPosition:
+  EnforcedStyle: leading
+
+Style/DoubleNegation:
+  Enabled: false
+
+Style/EachWithObject:
+  Enabled: false
+
+Style/Encoding:
+  Enabled: false
+
+Style/Lambda:
+  Enabled: false
+
+Style/SingleSpaceBeforeFirstArg:
+  Enabled: false
+
+Style/SpaceInsideHashLiteralBraces:
+  EnforcedStyle: no_space
+
+Style/StringLiterals:
+  EnforcedStyle: double_quotes
