@@ -1,78 +1,82 @@
 require 'ipaddr'
-require 'resolv'
+require 'resolv-replace'
 
 module Socketry
   class DNSResolver
     MAX_PACKET_SIZE = 512
+    RESOURCES = ([Resource::IN::A] + (use_ipv6? ? [Resource::IN::AAAA] : [])).freeze
 
     def self.resolve(timeout, hostname)
-      return config.default_hosts[hostname] if config.default_hosts[hostname]
+      # Check the hosts file
+      if unresolved_ip = config.default_hosts[hostname]
+        resolved_ip = resolve_ip(unresolved_id)
+        unless resolved_ip
+          raise Resolv::ResolvError, "invalid entry in hosts file: #{unresolved_ip}"
+        end
+        return resolved_ip
+      end
 
-      # TODO: Support IPv6 DNS addresses
-      socket = UDPSocket.new(timeout: timeout, family: Socket::AF_INET)
-      config.default_nameservers.each do |host, port|
+      # Hit each nameserver
+      config.default_nameservers.each do |ip, port|
+        # Hit IPv4 and IPv6
+        RESOURCES.each do |resource|
+          Socketry::UDPSocket.open(family: ip.family, timeout_instance: timeout) do |socket|
+            query = build_query(hostname, resource)
+            socket.send(query.encode, 0, ip.to_s, port)
 
+            data, _ = socket.recvfrom(MAX_PACKET_SIZE)
+
+            # TODO: Add handling for CNAME references with infinite reference protection
+            response = Resolv::DNS::Message.decode(data)
+            response.each_answer do |name, ttl, value|
+              return resolve_ip(value.address)
+            end
+          end
+        end
       end
 
       nil
-
-    ensure
-      socket.close if socket
     end
 
-      if host = resolve_hostname(hostname)
-        unless ip_address = resolve_host(host)
-          raise Resolv::ResolvError, "invalid entry in hosts file: #{host}"
-        end
-        return ip_address
+    def self.use_ipv6?
+      return @use_ipv6 if defined?(@use_ipv6)
+
+      begin
+        list = Socket.ip_address_list
+      rescue NotImplementedError
+        return @use_ipv6 = true
       end
 
-      query = build_query(hostname)
-      @socket.send query.encode, 0, @server.to_s, DNS_PORT
-      data, _ = @socket.recvfrom(MAX_PACKET_SIZE)
-      response = Resolv::DNS::Message.decode(data)
-
-      addrs = []
-      # The answer might include IN::CNAME entries so filters them out
-      # to include IN::A & IN::AAAA entries only.
-      response.each_answer { |name, ttl, value| addrs << value.address if value.respond_to?(:address) }
-
-      return if addrs.empty?
-      return addrs.first if addrs.size == 1
-      addrs
+      list.each do |a|
+        if a.ipv6? && !a.ipv6_loopback? && !a.ipv6_linklocal?
+          return @use_ipv6 = true
+        end
+      end
     end
 
     private
 
     def config; DNSResolverConfig end
 
-    def resolve_hostname(hostname)
-      # Resolv::Hosts#getaddresses pushes onto a stack
-      # so since we want the first occurance, simply
-      # pop off the stack.
-      resolv.getaddresses(hostname).pop rescue nil
-    end
-
-    def resolv
-      @resolv ||= Resolv::Hosts.new
-    end
-
-    def build_query(hostname)
+    def build_query(hostname, resource)
       Resolv::DNS::Message.new.tap do |query|
-        query.id = self.class.generate_id
+        query.id = config.generate_id
         query.rd = 1
-        query.add_question hostname, Resolv::DNS::Resource::IN::A
+        query.add_question hostname, resource
       end
     end
 
-    def resolve_host(host)
-      resolve_ip(Resolv::IPv4, host) || resolve_ip(Resolv::IPv6, host)
-    end
-
-    def resolve_ip(klass, host)
+    def resolve_ip(ip)
       begin
-        klass.create(host)
+        return Resolv::IPv4.new(ip)
       rescue ArgumentError
+      end
+
+      if self.class.use_ipv6?
+        begin
+          return Resolv::IPv6.new(ip)
+        rescue ArgumentError
+        end
       end
     end
   end

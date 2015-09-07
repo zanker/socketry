@@ -9,19 +9,23 @@ module Socketry
         end
 
         @time_left = @total_timeout
+        if @total_timeout <= 0
+          fail TiemoutError, "Timed out on initialize, allocated time was already below 0 (#{total_timeout})"
+        end
       end
 
       def start(mode)
+        reset(mode) if @started
         @started = Time.now
       end
 
       def reset(mode)
         @time_left -= (Time.now - @started)
-        if @time_left <= 0
-          fail TimeoutError, "Timed out on #{moed} after using the allocated #{@total_timeout} seconds"
-        end
+        @started = nil
 
-        reset(mode)
+        if @time_left <= 0
+          fail TimeoutError, "Timed out on #{mode} after using the allocated #{@total_timeout} seconds"
+        end
       end
 
       def timeout_seconds(mode)

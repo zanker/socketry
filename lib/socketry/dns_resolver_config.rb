@@ -1,4 +1,4 @@
-require 'set'
+require 'ipaddr'
 
 module Socketry
   class DNSResolverConfig
@@ -17,7 +17,7 @@ module Socketry
       @nameservers ||= begin
         Resolv::DNS::Config.default_config_hash[:nameserver].map do |line|
           host, port = line.split(':', 2)
-          [host, port || DNS_PORT]
+          [IpAddr.new(host), port || DNS_PORT]
         end.freeze
       end
     end

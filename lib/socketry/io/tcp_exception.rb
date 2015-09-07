@@ -1,31 +1,28 @@
 module Socketry
   module IO
-    module Exception
-      def read_nonblock(size)
+    module TcpException
+      def read(size)
         timeout.start(:read)
 
         begin
           socket.read_nonblock(size)
         rescue IO::WaitReadable
-          IO.select([socket], nil, nil, timeout.timeout_seconds(:read))
+          retry if IO.select([socket], nil, nil, timeout.timeout_seconds(:read))
           timeout.reset(:read)
-          retry
         rescue EOFError
           :eof
         end
       end
 
       # Write to the socket
-      def write_nonblock(data)
+      def write(data)
         timeout.start(:write)
 
         begin
           socket.write_nonblock(data)
         rescue IO::WaitWritable
-          IO.select(nil, [socket], nil, timeout.timeout_seconds(:write))
+          retry if IO.select(nil, [socket], nil, timeout.timeout_seconds(:write))
           timeout.reset(:write)
-          retry
-
         rescue EOFError
           :eof
         end

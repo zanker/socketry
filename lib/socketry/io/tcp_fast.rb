@@ -2,14 +2,18 @@
 # It's around 50% faster in MRI / ~80% in JRuby than exceptions.
 module Socketry
   module IO
-    module Fast
+    module TcpFast
       # Read from the socket
-      def read_nonblock(size)
+      def read(size)
         timeout.start(:read)
 
         loop do
           value = socket.read_nonblock(size, exception: false)
-          break value unless value == :wait_readable
+          if value.nil?
+            return :eof
+          elsif value != :wait_readable
+            return value
+          end
 
           IO.select([socket], nil, nil, timeout.timeout_seconds(:read))
           timeout.reset(:read)
@@ -17,12 +21,12 @@ module Socketry
       end
 
       # Write to the socket
-      def write_nonblock(data)
+      def write(data)
         timeout.start(:write)
 
         loop do
           value = socket.write_nonblock(data, exception: false)
-          break unless value == :wait_writable
+          return value unless value == :wait_writable
 
           IO.select(nil, [socket], nil, timeout.timeout_seconds(:write))
           timeout.reset(:write)
